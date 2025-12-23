@@ -341,7 +341,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'usuario_id' not in session:
-            return redirect(url_for('login'))
+            return redirect('/login')  # CORREÇÃO AQUI: mudado de url_for('login') para '/login'
         return f(*args, **kwargs)
     return decorated_function
 
@@ -378,12 +378,12 @@ def verificar_loja_ativa():
 
     usuario_id = session.get('usuario_id')
     if not usuario_id:
-        return
+        return redirect('/login')  # CORREÇÃO AQUI: mudado de url_for('login') para '/login'
 
     usuario = db.session.get(Usuario, usuario_id)
     if not usuario:
         session.clear()
-        return redirect(url_for('login'))
+        return redirect('/login')  # CORREÇÃO AQUI: mudado de url_for('login') para '/login'
 
     if usuario.username == 'bpereira':
         return
@@ -391,13 +391,13 @@ def verificar_loja_ativa():
     if not usuario.loja_id:
         flash('Usuário sem loja vinculada.', 'danger')
         session.clear()
-        return redirect(url_for('login'))
+        return redirect('/login')  # CORREÇÃO AQUI: mudado de url_for('login') para '/login'
 
     loja = db.session.get(Loja, usuario.loja_id)
     if not loja or not loja.ativo:
         flash("Esta loja está bloqueada.", "danger")
         session.clear()
-        return redirect(url_for('login'))
+        return redirect('/login')  # CORREÇÃO AQUI: mudado de url_for('login') para '/login'
 
     if loja.licenca_ativa == False:
         # ALERTA: Tentativa de acesso a loja bloqueada
@@ -587,6 +587,31 @@ class EngineCalculo:
 # ROTAS PRINCIPAIS
 # ==============================================================================
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Rota de login principal"""
+    if 'usuario_id' in session:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        usuario = Usuario.query.filter_by(username=username).first()
+        
+        if usuario and usuario.password == password:
+            session['usuario_id'] = usuario.id
+            session['usuario_nome'] = usuario.username
+            session['role'] = usuario.role
+            session['loja_id'] = usuario.loja_id
+            
+            flash(f"Bem-vindo, {usuario.username}!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Usuário ou senha incorretos!", "danger")
+    
+    return render_template('login.html')
+
 @app.route('/validar-chave', methods=['POST'])
 def validar_chave():
     chave_digitada = request.form.get('chave_secreta')
@@ -680,23 +705,6 @@ def index():
         logger.error(f"Erro no Index: {e}")
         return f"Erro Crítico: {e}", 500
 
-# Adicione APÓS init_database() e ANTES de if __name__ == '__main__':
-def create_admin_user():
-    with app.app_context():
-        # Em vez de 'from models import User', use:
-        # Se User está definido neste mesmo arquivo:
-        if 'User' in globals():
-            if User.query.filter_by(username="bpereira").first() is None:
-                admin = User(
-                    username="bpereira",
-                    password_hash="chef@26",
-                    full_name="Administrador",
-                    role="admin",
-                    store_id=1
-                )
-                db.session.add(admin)
-                db.session.commit()
-                print("✅ Usuário admin criado manualmente: bpereira / chef@26")
 # ==============================================================================
 # ROTAS PARA SUPER ADMIN (APENAS bpereira)
 # ==============================================================================
@@ -808,7 +816,7 @@ def admin_toggle_licenca(loja_id):
         • Loja: {loja.nome} (ID: {loja.id})
         • Novo status: {status_text}
         • Alterado por: {session.get('usuario_nome')}
-        • Data alteração: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}
+        • Data alteração: {datetime.now().strftime('%d/%m/Y %H:%M:%S')}
         • IP administrador: {request.remote_addr}
         
         ⚠️ IMPLICAÇÕES:
@@ -1838,9 +1846,7 @@ def setup_database():
 # ==============================================================================
 # VERIFICAÇÃO E CRIAÇÃO DO BANCO DE DADOS
 # ==============================================================================
-from sqlalchemy import text  # <-- ADICIONE ESTA LINHA
-
-from sqlalchemy import text  # ADICIONE ESTA IMPORT AQUI
+from sqlalchemy import text
 
 def init_database():
     """Inicializa o banco de dados e cria tabelas se necessário"""
@@ -1861,55 +1867,14 @@ def init_database():
                 db.create_all()
                 print("✅ Todas as tabelas criadas com sucesso!")
                 
-                # TENTAR criar usuário admin (com tratamento de erro)
-                try:
-                    # OPÇÃO 1: Se User está no mesmo arquivo
-                    if 'User' in globals():
-                        if User.query.first() is None:
-                            admin = User(
-                                username="bpereira",
-                                password_hash="chef@26",
-                                full_name="Administrador",
-                                role="admin",
-                                store_id=1
-                            )
-                            db.session.add(admin)
-                            db.session.commit()
-                            print("✅ Usuário admin criado: bpereira / chef@26")
-                    
-                    # OPÇÃO 2: Se User está em models.py
-                    elif True:  # Mude para verificar se models existe
-                        from models import User
-                        if User.query.first() is None:
-                            admin = User(
-                                username="bpereira",
-                                password_hash="chef@26",
-                                full_name="Administrador", 
-                                role="admin",
-                                store_id=1
-                            )
-                            db.session.add(admin)
-                            db.session.commit()
-                            print("✅ Usuário admin criado: bpereira / chef@26")
-                            
-                except ImportError:
-                    print("⚠️  Módulo 'models' não encontrado. Pulando criação de usuário.")
-                except Exception as e:
-                    print(f"⚠️  Não foi possível criar usuário: {e}")
-                    print("ℹ️  Crie manualmente: bpereira / chef@26")
-                
         except Exception as e:
             print(f"⚠️  Erro ao inicializar banco: {e}")
-            # Não precisa de traceback completo
 
 # Executar na inicialização
 init_database()
 
 
 if __name__ == '__main__':
-    # Remova setup_database() se já chamou init_database() acima
-    # setup_database()  # COMENTE ou REMOVA esta linha
-    
     # Modo produção
     if os.getenv('RENDER') or not app.debug:
         port = int(os.getenv('PORT', 10000))
