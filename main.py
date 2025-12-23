@@ -1,7 +1,7 @@
 ﻿import threading
 import webbrowser
 import time
-from FoodCost_Ultimate_ERP_v8.app1 import app, init_db
+from FoodCost_Ultimate_ERP_v8.app import app, init_db
 
 def open_browser():
     # Espera 1.5 segundos para garantir que o Flask subiu
