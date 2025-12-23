@@ -1846,6 +1846,8 @@ def setup_database():
 # ==============================================================================
 from sqlalchemy import text  # <-- ADICIONE ESTA LINHA
 
+from sqlalchemy import text  # ADICIONE ESTA IMPORT AQUI
+
 def init_database():
     """Inicializa o banco de dados e cria tabelas se necessário"""
     with app.app_context():
@@ -1865,31 +1867,54 @@ def init_database():
                 db.create_all()
                 print("✅ Todas as tabelas criadas com sucesso!")
                 
-                # Criar usuário admin padrão
-                from models import User  # Ajuste conforme sua estrutura
-                
-                admin = User(
-                    username="bpereira",
-                    password_hash="chef@26",  # Você deve usar hash na prática
-                    full_name="Administrador",
-                    role="admin",
-                    store_id=1
-                )
-                db.session.add(admin)
-                db.session.commit()
-                print("✅ Usuário admin criado: bpereira / chef@26")
+                # TENTAR criar usuário admin (com tratamento de erro)
+                try:
+                    # OPÇÃO 1: Se User está no mesmo arquivo
+                    if 'User' in globals():
+                        if User.query.first() is None:
+                            admin = User(
+                                username="bpereira",
+                                password_hash="chef@26",
+                                full_name="Administrador",
+                                role="admin",
+                                store_id=1
+                            )
+                            db.session.add(admin)
+                            db.session.commit()
+                            print("✅ Usuário admin criado: bpereira / chef@26")
+                    
+                    # OPÇÃO 2: Se User está em models.py
+                    elif True:  # Mude para verificar se models existe
+                        from models import User
+                        if User.query.first() is None:
+                            admin = User(
+                                username="bpereira",
+                                password_hash="chef@26",
+                                full_name="Administrador", 
+                                role="admin",
+                                store_id=1
+                            )
+                            db.session.add(admin)
+                            db.session.commit()
+                            print("✅ Usuário admin criado: bpereira / chef@26")
+                            
+                except ImportError:
+                    print("⚠️  Módulo 'models' não encontrado. Pulando criação de usuário.")
+                except Exception as e:
+                    print(f"⚠️  Não foi possível criar usuário: {e}")
+                    print("ℹ️  Crie manualmente: bpereira / chef@26")
                 
         except Exception as e:
-            print(f"❌ Erro ao inicializar banco: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"⚠️  Erro ao inicializar banco: {e}")
+            # Não precisa de traceback completo
 
 # Executar na inicialização
 init_database()
 
 
 if __name__ == '__main__':
-    setup_database()
+    # Remova setup_database() se já chamou init_database() acima
+    # setup_database()  # COMENTE ou REMOVA esta linha
     
     # Modo produção
     if os.getenv('RENDER') or not app.debug:
