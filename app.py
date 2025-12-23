@@ -1844,6 +1844,8 @@ def setup_database():
 # ==============================================================================
 # VERIFICAÇÃO E CRIAÇÃO DO BANCO DE DADOS
 # ==============================================================================
+from sqlalchemy import text  # <-- ADICIONE ESTA LINHA
+
 def init_database():
     """Inicializa o banco de dados e cria tabelas se necessário"""
     with app.app_context():
