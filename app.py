@@ -50,10 +50,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 database_url = os.getenv("DATABASE_URL")
 
 if database_url:
+    # O Render manda "postgres://". O SQLAlchemy precisa de "postgresql+psycopg://"
+    # para usar a versão 3 do driver que você instalou.
     if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    logger.info(f"Conexão de banco: PostgreSQL (Nuvem)")
+    logger.info(f"Conexão de banco: PostgreSQL (Nuvem) com driver Psycopg3")
 else:
     db_name = "database.db"
     db_path = os.path.join(base_path, db_name)
@@ -63,7 +68,7 @@ else:
 # --- DIAGNÓSTICO VISUAL NO TERMINAL ---
 print("\n" + "="*80)
 print(f" >>> SISTEMA INICIADO <<<")
-print(f" BANCO ATIVO: {'PostgreSQL (Nuvem)' if database_url else f'SQLite Local: {db_path}'}")
+print(f" BANCO ATIVO: {'PostgreSQL (Nuvem)' if database_url else f'SQLite Local'}")
 print("="*80 + "\n")
 
 db = SQLAlchemy(app)
