@@ -1838,4 +1838,11 @@ def setup_database():
 
 if __name__ == '__main__':
     setup_database()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    # Modo produção
+    if os.getenv('RENDER') or not app.debug:
+        port = int(os.getenv('PORT', 10000))
+        app.run(host='0.0.0.0', port=port)
+    else:
+        # Modo desenvolvimento local
+        app.run(debug=True, host='0.0.0.0', port=5000)
